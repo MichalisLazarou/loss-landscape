@@ -23,6 +23,9 @@ import plot_1D
 import model_loader
 import scheduler
 import mpi4pytorch as mpi
+sys.path.append('../rfs_baseline')
+
+from models.util import create_model
 
 def name_surface_file(args, dir_file):
     # skip if surf_file is specified in args
@@ -59,11 +62,11 @@ def setup_surface_file(args, surf_file, dir_file):
     f['dir_file'] = dir_file
 
     # Create the coordinates(resolutions) at which the function is evaluated
-    xcoordinates = np.linspace(args.xmin, args.xmax, num=args.xnum)
+    xcoordinates = np.linspace(args.xmin, args.xmax, num=int(args.xnum))
     f['xcoordinates'] = xcoordinates
 
     if args.y:
-        ycoordinates = np.linspace(args.ymin, args.ymax, num=args.ynum)
+        ycoordinates = np.linspace(args.ymin, args.ymax, num=int(args.ynum))
         f['ycoordinates'] = ycoordinates
     f.close()
 
@@ -107,6 +110,7 @@ def crunch(surf_file, net, w, s, d, dataloader, loss_key, acc_key, comm, rank, a
 
     # Loop over all uncalculated loss values
     for count, ind in enumerate(inds):
+        print("count: ", count, "total: ", len(inds)) 
         # Get the coordinates of the loss value being calculated
         coord = coords[count]
 
@@ -241,7 +245,10 @@ if __name__ == '__main__':
     #--------------------------------------------------------------------------
     # Load models and extract parameters
     #--------------------------------------------------------------------------
-    net = model_loader.load(args.dataset, args.model, args.model_file)
+    #net = model_loader.load(args.dataset, args.model, args.model_file)
+    net = create_model('resnet12', 10, dataset="CIFAR-FS")
+    ckpt = torch.load('/home/michalislazarou/PhD/loss-landscape/cifar10/trained_nets/my_nets/clean_200.pth', map_location=torch.device('cpu') )
+    net.load_state_dict(ckpt['model'])
     w = net_plotter.get_weights(net) # initial parameters
     s = copy.deepcopy(net.state_dict()) # deepcopy since state_dict are references
     if args.ngpu > 1:
